@@ -42,7 +42,7 @@ PhysVoice-Pipeline/
 | 구성 | 상태 |
 |------|------|
 | 폴더 구조 / setup.sh / config | ✅ |
-| voice (Voice 에서 이식) | ⬜ |
+| voice (Voice 에서 이식) | ✅ |
 | bridge (router·dispatcher) | ⬜ |
 | calibration 복사 | ⬜ |
 | run.sh 엔트리포인트 연결 | ⬜ |
