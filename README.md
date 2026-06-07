@@ -43,6 +43,18 @@ PhysVoice-Pipeline/
 |------|------|
 | 폴더 구조 / setup.sh / config | ✅ |
 | voice (Voice 에서 이식) | ✅ |
-| bridge (router·dispatcher) | ⬜ |
+| bridge (router·dispatcher·feedback·main) | ✅ |
+| run.sh 엔트리포인트 연결 | ✅ |
 | calibration 복사 | ⬜ |
-| run.sh 엔트리포인트 연결 | ⬜ |
+| lerobot 설치 방식 확정 (아래 참고) | ⬜ |
+
+### 테스트 (로봇/torch 없이)
+```bash
+python -m bridge.main --print-commands   # task_map → lerobot-record 명령 미리보기
+```
+
+### 운영 참고 (알려진 고려사항)
+- **GPU 메모리**: voice(Whisper)가 상주한 채 lerobot(SmolVLA)이 별도 로드됨 → 넉넉한 VRAM 권장(분리 GPU 가능).
+- **최초 1회 네트워크**: 정책(공개 HF 모델)을 처음 실행 시 다운로드/캐시함(로그인 불필요).
+- **에피소드 시간**: `lerobot-record` 는 키 입력이 없으면 `episode_time_s` 동안 끝까지 동작 → `config/robot_profile.yaml` 에서 단일 동작에 맞게 조정.
+- **하드웨어 덮어쓰기**: `ROBOT_PORT / WRIST_CAM / TOP_CAM / INFERENCE_DEVICE` 환경변수로 PC별 차이 흡수.

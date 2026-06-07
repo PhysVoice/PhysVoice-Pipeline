@@ -17,11 +17,21 @@ class AudioStream:
     def __init__(self, sample_rate: int = SAMPLE_RATE, chunk_size: int = CHUNK_SIZE):
         self.sample_rate = sample_rate
         self.chunk_size  = chunk_size
-        self._q: "queue.Queue[np.ndarray]" = queue.Queue()
+        # maxsize 로 무한 누적 방지 (로봇 실행 등 장시간 소비 중단 시 ~16s 분량만 유지).
+        self._q: "queue.Queue[np.ndarray]" = queue.Queue(maxsize=512)
         self._stream = None
 
     def _callback(self, indata, frames, time, status):
-        self._q.put(indata[:, 0].copy().astype(np.float32))
+        # 오디오 콜백 스레드는 절대 블로킹하면 안 됨(xrun). 큐가 차면 가장 오래된 입력 폐기.
+        chunk = indata[:, 0].copy().astype(np.float32)
+        try:
+            self._q.put_nowait(chunk)
+        except queue.Full:
+            try:
+                self._q.get_nowait()      # 가장 오래된 청크 버리고
+                self._q.put_nowait(chunk)  # 최신 청크 넣기
+            except queue.Empty:
+                pass
 
     def start(self):
         input_devs = [d for d in sd.query_devices() if d["max_input_channels"] > 0]

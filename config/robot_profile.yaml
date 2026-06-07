@@ -15,12 +15,14 @@ robot:
 
 cameras:
   wrist:
+    type: opencv
     index_or_path: /dev/video33
     width: 640
     height: 480
     fps: 30
     fourcc: MJPG
   top:
+    type: opencv
     index_or_path: /dev/video35
     width: 640
     height: 480
@@ -29,5 +31,11 @@ cameras:
 
 inference:
   device: ""          # "" = 정책 기본(cuda) → 없으면 cpu 폴백 / "cuda" / "cpu"
-  episode_time_s: 240
+  # 한 명령당 로봇이 정책을 실행하는 고정 시간(초). lerobot-record 는 키 입력이 없으면
+  # 이 시간만큼 끝까지 동작한다. 단일 pick&place 에 맞춰 조정할 것.
+  episode_time_s: 60
   fps: 30
+
+# ── 하드웨어 값 환경변수 덮어쓰기 (PC/로봇 다를 때) ──
+#   ROBOT_PORT, WRIST_CAM, TOP_CAM, INFERENCE_DEVICE
+#   PHYSVOICE_DATASET_ROOT, PHYSVOICE_DATASET_REPO (임시 데이터셋 위치/이름)

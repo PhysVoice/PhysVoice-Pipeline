@@ -18,8 +18,9 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-# TODO(구현 단계): bridge 엔트리포인트 연결
-#   - voice 파이프라인이 Task ID 출력
-#   - bridge 가 수신 → task_map.yaml 라우팅 → lerobot-record 호출
-# 예) python -m bridge.main --config config/task_map.yaml --robot config/robot_profile.yaml
-echo "[run] 아직 엔트리포인트 미구현 — bridge/ 채운 뒤 이 부분 연결 예정."
+# voice 파이프라인 → Task ID → bridge 라우팅 → lerobot-record 추론
+#   인자는 그대로 bridge.main 으로 전달됨:
+#     bash run.sh                 로컬 마이크
+#     bash run.sh --network       노트북 마이크(TCP)
+#     bash run.sh --dry-run       로봇 없이 명령만 출력(테스트)
+exec python -m bridge.main "$@"

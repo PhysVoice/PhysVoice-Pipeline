@@ -21,15 +21,20 @@
 import os
 import queue
 import sys
+from typing import Callable, Optional
 
 import numpy as np
 import torch
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(_ROOT, "Whisper"))
-sys.path.insert(0, os.path.join(_ROOT, "KWS"))
-sys.path.insert(0, os.path.join(_ROOT, "DeepFilterNet"))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+for _p in (
+    os.path.join(_ROOT, "Whisper"),
+    os.path.join(_ROOT, "KWS"),
+    os.path.join(_ROOT, "DeepFilterNet"),
+    os.path.dirname(os.path.abspath(__file__)),
+):
+    if _p not in sys.path:           # 중복 삽입 방지 (bridge.main 과 공존)
+        sys.path.insert(0, _p)
 
 from config import SAMPLE_RATE, VAD_THRESHOLD  # noqa: E402
 from stt import transcribe  # noqa: E402
@@ -65,11 +70,15 @@ class RealtimePipeline:
         use_denoise: True면 STT 전에 DeepFilterNet3으로 노이즈 제거
     """
 
-    def __init__(self, use_denoise: bool = True):
+    def __init__(self, use_denoise: bool = True,
+                 result_callback: Optional[Callable[[dict, Callable[[str], None]], None]] = None):
         print("[초기화] Silero VAD 모델 로딩...")
-        self.vad_model   = _load_silero_vad()
-        self.use_denoise = use_denoise
-        self._stream     = None
+        self.vad_model       = _load_silero_vad()
+        self.use_denoise     = use_denoise
+        self._stream         = None
+        # bridge 연결 훅: 명령 인식(SUCCESS) 시 result_callback(result, notify) 호출.
+        # None 이면 기존 standalone 동작 그대로 (backward-compatible).
+        self.result_callback = result_callback
         print("[초기화] 완료. 파이프라인 준비됨\n")
 
     # ── 서버 + 노트북 동시 출력 ─────────────────────
@@ -82,11 +91,6 @@ class RealtimePipeline:
     def _vad_prob(self, chunk: np.ndarray) -> float:
         with torch.no_grad():
             return float(self.vad_model(torch.from_numpy(chunk), SAMPLE_RATE).item())
-
-    # ── KWS 검사 ──
-    @staticmethod
-    def _check_kws(window: np.ndarray) -> bool:
-        return detect_wake_word(window)
 
     # ── Whisper로 웨이크워드 검증 ──────────────────
     @staticmethod
@@ -119,6 +123,21 @@ class RealtimePipeline:
             try:
                 chunk = stream.read(timeout=0.05)
                 flushed += len(chunk)
+            except queue.Empty:
+                break
+
+    # ── 버퍼 전량 비우기 (로봇 실행 등 장시간 블로킹 후) ──
+    @staticmethod
+    def _drain_all(stream):
+        """로봇 동작 중 캡처된 스테일 발화 폐기.
+        라이브 생산(매 ~32ms)을 무한 추격하지 않도록, 호출 시점의 큐 적재분(snapshot)만 비운다."""
+        try:
+            backlog = stream._q.qsize()
+        except Exception:
+            backlog = 0
+        for _ in range(backlog):
+            try:
+                stream.read(timeout=0.01)
             except queue.Empty:
                 break
 
@@ -192,6 +211,17 @@ class RealtimePipeline:
         # 노트북으로도 결과 전송
         if stream is not None and hasattr(stream, "send"):
             stream.send(output)
+
+        # ── Bridge 훅: 인식 성공 시 콜백 (로봇 실행 동안 블로킹) ──
+        if self.result_callback is not None and result["status"] == "SUCCESS":
+            try:
+                self.result_callback(result, self._notify)
+            except Exception as e:
+                print(f"[경고 ] bridge 콜백 실패: {e}")
+            finally:
+                # 로봇 실행 동안 쌓인 오디오 전량 폐기 (스테일 발화 오인식 방지)
+                if stream is not None:
+                    self._drain_all(stream)
 
         return result["status"] == "SUCCESS"
 
