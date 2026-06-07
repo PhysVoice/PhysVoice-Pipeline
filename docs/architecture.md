@@ -40,7 +40,7 @@
 | 추론 구동 | 명령마다 `lerobot-record` 재실행 | 느슨한 결합, 크래시 격리 |
 | 정책 구조 | 색별 별도 모델 (Phase 2) | 정책 선택 = 색 라우팅 |
 | 레포 형태 | 단일 모노레포 (자기완결형) | clone 하나로 작업 가능 |
-| lerobot | pip 핀 설치 (커밋 60efd875) + 전용 venv | 레포 가볍게, venv 로 격리 |
+| lerobot | PhysVoice/lerobot 포크 핀 설치 + 전용 venv | 추론 패치 포함(아래), 레포 가볍게, venv 격리 |
 | 음성 두뇌 | PhysVoice/Voice 재사용 | voice/ 로 가져옴 |
 
 ## 폴더
@@ -54,6 +54,14 @@ PhysVoice-Pipeline/
 ├── run.sh         통합 실행
 └── requirements.txt
 ```
+
+## lerobot 포크 (왜 pristine 이 아닌가)
+`setup.sh` 는 [PhysVoice/lerobot](https://github.com/PhysVoice/lerobot) 포크의 핀 커밋
+(`19cb4ff`, huggingface@60efd875 기반)을 설치한다. pristine huggingface lerobot 으로는
+학습된 SmolVLA 체크포인트 로딩이 `DecodingError` 로 깨지기 때문이다. 포크가 담은 패치:
+- `configuration_smolvla.py` — newer lerobot 에서 학습된 체크포인트의 `use_peft`/
+  `compile_model`/`compile_mode` 필드를 핀 버전 파서가 수용 (추론 필수)
+- `so101_follower.py` — `cam.async_read(timeout_ms=2000)` 카메라 read 안정화
 
 ## lerobot 격리 (왜 venv?)
 `lerobot` 은 패키지명이 하나라 한 환경에 한 버전만 가능.

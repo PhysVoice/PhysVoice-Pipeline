@@ -45,8 +45,8 @@ PhysVoice-Pipeline/
 | voice (Voice 에서 이식) | ✅ |
 | bridge (router·dispatcher·feedback·main) | ✅ |
 | run.sh 엔트리포인트 연결 | ✅ |
+| lerobot 설치 (PhysVoice 포크 핀) | ✅ |
 | calibration 복사 | ⬜ |
-| lerobot 설치 방식 확정 (아래 참고) | ⬜ |
 
 ### 테스트 (로봇/torch 없이)
 ```bash
