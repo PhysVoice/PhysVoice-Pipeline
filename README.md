@@ -46,7 +46,8 @@ PhysVoice-Pipeline/
 | bridge (router·dispatcher·feedback·main) | ✅ |
 | run.sh 엔트리포인트 연결 | ✅ |
 | lerobot 설치 (PhysVoice 포크 핀) | ✅ |
-| calibration 복사 | ⬜ |
+| calibration 복사 (SO101 follower/leader) | ✅ |
+| **실제 로봇 PC 검증** (setup.sh 실행 + 음성→동작) | ⬜ |
 
 ### 테스트 (로봇/torch 없이)
 ```bash
