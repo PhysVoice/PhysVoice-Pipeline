@@ -1,0 +1,22 @@
+# Python venv (setup.sh가 생성)
+.venv/
+venv/
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 모델/런타임 캐시
+outputs/
+*.onnx
+*.onnx.data
+*.wav
+*.m4a
+*.mp3
+
+# OS / 에디터
+.DS_Store
+.idea/
+*.swp

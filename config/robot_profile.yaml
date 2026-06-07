@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────
+# SO101 로봇/카메라 프로필 (이 PC·이 로봇 기준)
+#
+# bridge/dispatcher 가 lerobot-record 인자를 만들 때 사용.
+# PC/로봇이 바뀌면 여기만 수정하면 됨.
+# (값 출처: smolvla-red-blue-training/robot/eval.sh)
+# ─────────────────────────────────────────────────────────────
+
+robot:
+  type: so101_follower
+  id: my_follower
+  port: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5AE6085270-if00
+  # 캘리브레이션: 레포 내 calibration/ 에서 자동 인식
+  calibration_dir: calibration/robots/so101_follower
+
+cameras:
+  wrist:
+    index_or_path: /dev/video33
+    width: 640
+    height: 480
+    fps: 30
+    fourcc: MJPG
+  top:
+    index_or_path: /dev/video35
+    width: 640
+    height: 480
+    fps: 30
+    fourcc: MJPG
+
+inference:
+  device: ""          # "" = 정책 기본(cuda) → 없으면 cpu 폴백 / "cuda" / "cpu"
+  episode_time_s: 240
+  fps: 30

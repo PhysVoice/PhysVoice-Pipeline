@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────
+# PhysVoice-Pipeline 의존성 (음성 + bridge)
+#
+# lerobot 은 여기 두지 않고 setup.sh 가 핀 커밋으로 따로 설치한다.
+# (lerobot 이 torch 를 끌어오므로 torch 는 여기서 핀하지 않음)
+#
+# 시스템 패키지(먼저 설치 필요):
+#   Ubuntu/Debian:  sudo apt install ffmpeg portaudio19-dev libsndfile1
+#   macOS:          brew install ffmpeg portaudio libsndfile
+# ─────────────────────────────────────────────────────────────
+
+# ── 음성 인식 (voice/) ──
+faster-whisper==1.2.1     # STT
+ctranslate2==4.7.1        # faster-whisper 백엔드
+openwakeword==0.6.0       # KWS 웨이크워드
+onnxruntime==1.24.4       # openwakeword 런타임
+deepfilternet==0.5.6      # 노이즈 제거 (옵션)
+sounddevice==0.5.5        # 마이크 입출력
+scipy==1.17.1
+
+# ── bridge (config 파싱 등) ──
+PyYAML>=6.0
+
+# numpy 는 lerobot/torch 와 충돌 피하려 핀하지 않음.
+# 만약 버전 충돌 나면 여기서 numpy 를 명시적으로 맞춘다.
+numpy
