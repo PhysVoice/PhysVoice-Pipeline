@@ -122,7 +122,10 @@ class Dispatcher:
         calib = self._calib_dir()
         if calib:
             cmd.append(f"--robot.calibration_dir={calib}")
-        cmd.append(f"--robot.cameras={self._cameras_arg()}")
+        # 주의: replay 에는 --robot.cameras 를 넣지 않는다.
+        #   리플레이는 녹화된 관절 action 을 그대로 재생할 뿐 카메라를 읽지 않으며,
+        #   lerobot-replay 엔트리포인트는 opencv 카메라 플러그인을 등록하지 않아
+        #   'type: opencv' 가 draccus DecodingError 를 낸다(record 와 다른 점).
 
         cmd += [
             f"--dataset.repo_id={replay.get('repo_id')}",
