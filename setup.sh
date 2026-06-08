@@ -37,8 +37,10 @@ echo "  Python: $(python --version)"
 echo "=== [2/4] 음성/bridge 의존성 설치 ==="
 pip install -r requirements.txt
 
-echo "=== [3/4] lerobot 설치 (PhysVoice 포크 핀: ${LEROBOT_COMMIT:0:8}, smolvla) ==="
-pip install "lerobot[smolvla] @ git+${LEROBOT_REPO}@${LEROBOT_COMMIT}"
+echo "=== [3/4] lerobot 설치 (PhysVoice 포크 핀: ${LEROBOT_COMMIT:0:8}, smolvla+feetech) ==="
+# feetech: SO101 follower 의 Feetech 모터 버스(scservo_sdk)용 — 없으면 로봇 연결 시
+#          ModuleNotFoundError: No module named 'scservo_sdk' 로 죽는다.
+pip install "lerobot[smolvla,feetech] @ git+${LEROBOT_REPO}@${LEROBOT_COMMIT}"
 
 echo "=== [4/4] torchaudio 설치 (Silero VAD 의존성, torch 버전·CUDA 매칭) ==="
 # Silero VAD(음성 VAD)가 torchaudio 를 import 하는데, lerobot[smolvla] 는
