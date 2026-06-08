@@ -11,7 +11,8 @@ __pycache__/
 # 모델/런타임 캐시
 outputs/
 .cache/
-recordings/   # 시연용 텔레옵 녹화 데이터셋(로컬, 용량 큼)
+# 시연용 텔레옵 녹화 데이터셋(로컬, 용량 큼)
+recordings/
 *.onnx
 *.onnx.data
 *.wav
