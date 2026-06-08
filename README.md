@@ -35,6 +35,7 @@ PhysVoice-Pipeline/
 ```
 
 자세한 설계는 [docs/architecture.md](docs/architecture.md).
+**로봇 PC에서 처음 띄우는 작업자/에이전트는 → [HANDOFF.md](HANDOFF.md) 부터.**
 
 ## 상태
 🚧 **골격 단계** — 폴더 구조 + setup.sh 완료. voice/bridge 구현은 다음 단계.
