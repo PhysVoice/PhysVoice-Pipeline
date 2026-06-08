@@ -38,9 +38,9 @@ for _p in (
 
 from config import SAMPLE_RATE, VAD_THRESHOLD  # noqa: E402
 from stt import transcribe  # noqa: E402
-from denoise import denoise  # noqa: E402
 from command_parser import normalize_korean_command, parse_command  # noqa: E402
 from audio_stream import CHUNK_SIZE, AudioStream, FileStream, NetworkStream  # noqa: E402
+# 주의: denoise(DeepFilterNet) 는 선택 의존성이라 _process 에서 지연 import 한다.
 
 # ──────────────────────────────────────────────
 # 상수
@@ -189,9 +189,10 @@ class RealtimePipeline:
 
         if self.use_denoise:
             try:
+                from denoise import denoise   # 지연 import (deepfilternet 선택 설치)
                 audio = denoise(audio)
             except Exception as e:
-                print(f"[경고 ] 노이즈 제거 실패 ({e}), 원본 사용")
+                print(f"[경고 ] 노이즈 제거 불가 ({e}), 원본 사용 — 끄려면 --no-denoise")
 
         raw_text   = transcribe(audio)
         normalized = normalize_korean_command(raw_text)

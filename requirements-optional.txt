@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────
+# 선택 의존성 — 기본 흐름엔 불필요. 필요할 때만 설치.
+#
+#   source .venv/bin/activate
+#   pip install -r requirements-optional.txt
+#
+# ⚠️ Python 버전 주의: openwakeword 의 tflite-runtime 은 Python 3.13 휠이 없다.
+#    KWS 가 필요하면 venv 를 Python 3.10~3.12 로 만들어야 한다:
+#       PYTHON=python3.11 bash setup.sh
+# ─────────────────────────────────────────────────────────────
+
+# ── KWS (openWakeWord 웨이크워드) — voice/KWS 사용 시 ──
+#    없으면 Whisper STT 기반 웨이크워드 검증으로 동작 (기본)
+openwakeword==0.6.0
+onnxruntime==1.24.4
+
+# ── 노이즈 제거 (DeepFilterNet) — --no-denoise 안 쓸 때 ──
+#    설치 실패 시 파이프라인은 자동으로 노이즈제거 없이 동작
+deepfilternet==0.5.6

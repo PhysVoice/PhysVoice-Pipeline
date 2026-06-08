@@ -29,6 +29,9 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 python -m pip install --upgrade pip
+echo "  Python: $(python --version)"
+# 참고: 선택 의존성 openWakeWord(KWS) 는 Python 3.13 미지원.
+#       KWS 가 꼭 필요하면:  PYTHON=python3.11 bash setup.sh
 
 echo "=== [2/3] 음성/bridge 의존성 설치 ==="
 pip install -r requirements.txt
@@ -40,6 +43,7 @@ echo
 echo "=== 설치 완료 ==="
 echo "  - 가상환경:   source .venv/bin/activate"
 echo "  - 실행:       bash run.sh"
+echo "  - 선택기능:   pip install -r requirements-optional.txt  (KWS/노이즈제거, 3.13 주의)"
 echo
 echo "  ※ 시스템 패키지가 없으면 먼저 설치:"
 echo "      sudo apt install ffmpeg portaudio19-dev libsndfile1"
