@@ -89,7 +89,14 @@ class FileStream:
             sys.path.insert(0, _whisper)
         from audio_loader import load_audio
 
-        audio  = load_audio(self.file_path)
+        try:
+            audio = load_audio(self.file_path)
+        except Exception as e:
+            # 파일 없음/ffmpeg 실패 등: 데몬 스레드가 조용히 죽으면 read() 가
+            # queue.Empty 로 "발화 미감지" 처럼 보여 진단이 어렵다. 명확히 알리고 종료.
+            print(f"[오류] 오디오 파일 로드 실패: {self.file_path} — {e}", file=sys.stderr)
+            self._q.put(None)   # 즉시 종료 신호
+            return
         offset = 0
         while offset < len(audio) and not self._stop_event.is_set():
             chunk = audio[offset: offset + self.chunk_size]

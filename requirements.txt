@@ -2,7 +2,9 @@
 # PhysVoice-Pipeline 핵심 의존성 (음성 + bridge)  ── 기본 흐름에 필요한 것만
 #
 # lerobot 은 여기 두지 않고 setup.sh 가 PhysVoice 포크 핀 커밋으로 설치한다.
-# (lerobot 이 torch 를 끌어오므로 torch/Silero VAD 는 여기서 핀하지 않음)
+# (lerobot 이 torch 를 끌어오므로 torch 는 여기서 핀하지 않음)
+# torchaudio(Silero VAD 의존성)도 여기 두지 않는다 — torch 보다 먼저 설치되면
+#   CUDA 빌드가 어긋나므로 setup.sh [4] 가 torch 버전에 맞춰 설치한다.
 #
 # 선택 기능(openWakeWord KWS, DeepFilterNet 노이즈제거)은 requirements-optional.txt.
 # 기본 흐름은 KWS 없이 Whisper 웨이크워드 검증 + (옵션) 노이즈제거로 동작한다.

@@ -4,6 +4,8 @@
 # bridge/dispatcher 가 lerobot-record 인자를 만들 때 사용.
 # PC/로봇이 바뀌면 여기만 수정하면 됨.
 # (값 출처: smolvla-red-blue-training/robot/eval.sh)
+# 카메라 노드는 이 PC(rtx3090)에서 프레임 캡처로 검증·정정함:
+#   wrist=/dev/video0(그리퍼 근접), top=/dev/video2(작업대 탑다운).  2026-06-09
 # ─────────────────────────────────────────────────────────────
 
 robot:
@@ -16,14 +18,14 @@ robot:
 cameras:
   wrist:
     type: opencv
-    index_or_path: /dev/video33
+    index_or_path: /dev/video0
     width: 640
     height: 480
     fps: 30
     fourcc: MJPG
   top:
     type: opencv
-    index_or_path: /dev/video35
+    index_or_path: /dev/video2
     width: 640
     height: 480
     fps: 30

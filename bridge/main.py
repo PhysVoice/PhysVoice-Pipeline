@@ -50,8 +50,13 @@ def main():
     if args.print_commands:
         for task_id in router.tasks:
             res = router.resolve(task_id)
-            print(f"\n# {task_id}  →  {res.policy}")
-            print("  " + " ".join(dispatcher.build_command(res.policy, res.task)))
+            if res.supported:
+                print(f"\n# {task_id}  →  {res.policy}")
+                print("  " + " ".join(dispatcher.build_command(res.policy, res.task)))
+            else:
+                # 미지원/미완성 항목에 build_command 를 호출하면 '--policy.path=None' 같은
+                # 잘못된 인자가 찍히므로 건너뛴다.
+                print(f"\n# {task_id}  →  미지원 ({res.reason})")
         return
 
     # 명령 인식 시 호출되는 콜백 (로봇 실행 동안 블로킹 → 음성 자연 일시정지)
@@ -70,6 +75,17 @@ def main():
     from audio_stream import AudioStream, NetworkStream, FileStream
 
     pipeline = RealtimePipeline(use_denoise=not args.no_denoise, result_callback=on_command)
+
+    # Whisper 모델을 미리 로드한다. 안 하면 첫 발화("피식아") 인식 도중 모델 로딩으로
+    # 멈춘 듯 보이고(최초엔 ~1.5GB 다운로드), 네트워크 실패가 대화 중에 터진다.
+    from stt import _get_model  # _add_voice_to_path() 로 voice/Whisper 가 sys.path 에 있음
+    try:
+        _get_model()
+    except Exception as e:
+        print(f"[오류] Whisper 모델 로드 실패: {e}", file=sys.stderr)
+        print("  인터넷 연결을 확인하고 다시 실행하세요 (최초 1회 모델 다운로드 필요).", file=sys.stderr)
+        sys.exit(1)
+    print("[초기화] Whisper 모델 준비 완료\n")
 
     if args.network:
         stream = NetworkStream(port=args.port)
