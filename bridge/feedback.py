@@ -8,7 +8,13 @@ from bridge import speech
 
 
 def supported(notify, res):
-    notify(f"[ 실행 ] {res.task_id} → 정책 {res.policy}")
+    if res.policy:
+        src = f"정책 {res.policy}"
+    elif res.replay:
+        src = f"리플레이 {res.replay.get('repo_id')} ep{res.replay.get('episode', 0)}"
+    else:
+        src = "?"
+    notify(f"[ 실행 ] {res.task_id} → {src}")
     speech.speak(res.task_id, block=True)   # 예: "빨간색 박스, 넣어 드릴게요!" (없으면 패스)
     notify("[ 실행 ] 로봇 동작 중... (완료까지 대기)")
 

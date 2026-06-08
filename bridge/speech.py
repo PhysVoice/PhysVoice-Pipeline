@@ -18,6 +18,7 @@ PHRASES = {
     "wake":                   "네! 피식이 여기 있어요.",
     "TASK_PICK_PUT_RED_BOX":  "빨간색 박스, 넣어 드릴게요!",
     "TASK_PICK_PUT_BLUE_BOX": "파란색 박스, 넣어 드릴게요!",
+    "TASK_STACK":             "차곡차곡 쌓아 드릴게요!",
     "done":                   "다 했어요!",
     "unsupported":            "음, 그건 아직 못 해요.",
     "fail":                   "잘 못 들었어요. 다시 말씀해 주세요.",

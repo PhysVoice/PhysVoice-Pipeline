@@ -40,13 +40,16 @@ def main():
     ap.add_argument("--skip-kws", action="store_true", help="웨이크워드 생략")
     ap.add_argument("--no-denoise", action="store_true", help="노이즈 제거 비활성화")
     ap.add_argument("--no-tts", action="store_true", help="시연용 음성 피드백(TTS) 비활성화")
+    ap.add_argument("--replay", action="store_true",
+                    help="정책 추론 대신 녹화 재생(lerobot-replay). task_map 의 replay 블록 사용 (시연용)")
     ap.add_argument("--dry-run", action="store_true", help="lerobot 호출 대신 명령만 출력")
     ap.add_argument("--print-commands", action="store_true",
-                    help="task_map 의 모든 명령에 대한 lerobot-record 명령을 출력하고 종료 (voice/torch 불필요)")
+                    help="task_map 의 모든 명령에 대한 lerobot 명령을 출력하고 종료 (voice/torch 불필요)")
     args = ap.parse_args()
 
     if args.no_tts:
         os.environ["PHYSVOICE_TTS"] = "0"
+    replay_mode = args.replay or os.environ.get("PHYSVOICE_REPLAY") == "1"
 
     router = Router(args.task_map)
     dispatcher = Dispatcher(args.robot_profile, dry_run=args.dry_run)
@@ -55,23 +58,35 @@ def main():
     if args.print_commands:
         for task_id in router.tasks:
             res = router.resolve(task_id)
-            if res.supported:
+            if replay_mode:
+                if res.has_replay:
+                    print(f"\n# {task_id}  →  [replay] {res.replay.get('repo_id')} ep{res.replay.get('episode', 0)}")
+                    print("  " + " ".join(dispatcher.build_replay_command(res.replay)))
+                else:
+                    print(f"\n# {task_id}  →  [replay] 미지원 (replay 블록 없음)")
+            elif res.has_policy:
                 print(f"\n# {task_id}  →  {res.policy}")
                 print("  " + " ".join(dispatcher.build_command(res.policy, res.task)))
+            elif res.has_replay:
+                # 정책은 없고 replay 만 있는 태스크(예: stacking) — 정책 모드에선 미지원
+                print(f"\n# {task_id}  →  미지원 (정책 없음 — replay 전용, --replay 로 실행)")
             else:
-                # 미지원/미완성 항목에 build_command 를 호출하면 '--policy.path=None' 같은
-                # 잘못된 인자가 찍히므로 건너뛴다.
                 print(f"\n# {task_id}  →  미지원 ({res.reason})")
         return
 
     # 명령 인식 시 호출되는 콜백 (로봇 실행 동안 블로킹 → 음성 자연 일시정지)
     def on_command(result, notify):
         res = router.resolve(result["task_id"])
-        if not res.supported:
+        # 현재 모드에서 실제로 돌릴 소스가 있는지: replay 모드=녹화, 정책 모드=정책
+        runnable = res.has_replay if replay_mode else res.has_policy
+        if not runnable:
+            if res.supported:   # 태스크는 있으나 이 모드의 실행 소스가 없음(예: 정책 모드의 stacking)
+                res.reason = (f"{result['task_id']}: "
+                              f"{'replay 블록' if replay_mode else '정책'} 없음 — 이 모드에서 미지원")
             feedback.unsupported(notify, res)
             return
         feedback.supported(notify, res)
-        code = dispatcher.run(res.policy, res.task)
+        code = dispatcher.run(replay=res.replay) if replay_mode else dispatcher.run(res.policy, res.task)
         feedback.done(notify, res, code)
 
     # voice 는 무거운 의존성(torch 등)을 끌어오므로 여기서 지연 import

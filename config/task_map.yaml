@@ -4,21 +4,41 @@
 # voice 파이프라인이 뽑은 Task ID 를 여기서 조회해
 #   - policy : 어떤 SmolVLA 정책을 로드할지 (= 색 라우팅)
 #   - task   : VLA 를 조건화할 영어 명령 문자열
+#   - replay : (선택) 시연용 녹화 재생 소스. `--replay` 모드에서만 사용.
+#              root 는 레포 루트 기준 상대경로 허용(dispatcher 가 절대경로로 변환).
 # 으로 변환한다. 여기에 없는 Task ID 는 bridge 가 "미지원"으로 처리.
 #
 # 정책 가중치는 HF Hub 에서 자동 다운로드되므로 ID(문자열)만 적으면 됨.
+# replay 데이터셋은 recordings/ 에 텔레옵으로 녹화(로컬, git 미추적).
 # ─────────────────────────────────────────────────────────────
 
 tasks:
   TASK_PICK_PUT_RED_BOX:
     policy: AmberHyunKIM/smolvla_red_only_frozen
     task:   "put the red cube in the left white box"
+    replay:
+      repo_id: physvoice/golden_red
+      root:    recordings/golden_red
+      episode: 0
 
   TASK_PICK_PUT_BLUE_BOX:
     policy: AmberHyunKIM/smolvla_blue_only_frozen
     task:   "put the blue cube in the right white box"
+    replay:
+      repo_id: physvoice/golden_blue
+      root:    recordings/golden_blue
+      episode: 0
 
-# ── 현재 학습된 모델이 없어 미지원인 명령 (참고용, 주석) ──
+  # stacking 은 학습된 정책이 없다 → 정책 모드에선 "미지원",
+  # --replay 모드에서만 녹화 재생으로 동작한다.
+  TASK_STACK:
+    task:   "stack the cubes into a tower"
+    replay:
+      repo_id: physvoice/golden_stack
+      root:    recordings/golden_stack
+      episode: 0
+
+# ── 현재 학습된 모델이 없어 정책 모드에서 미지원인 명령 (참고용, 주석) ──
 #   TASK_PICK_RED_BOX / TASK_PUT_RED_BOX           : pick-only / put-only 모델 없음
 #   TASK_*_GREEN_BOX                               : 초록 모델 미학습
-#   → bridge 는 tasks 에 없는 Task ID 를 자동으로 "미지원" 응답 처리
+#   → bridge 는 정책/리플레이 어느 것도 없는 Task ID 를 자동으로 "미지원" 처리

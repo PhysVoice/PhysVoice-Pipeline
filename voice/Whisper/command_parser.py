@@ -132,11 +132,29 @@ def detect_color(text: str) -> "str | None":
             return color
     return None
 
+# stacking(쌓기) 키워드 — 색상보다 먼저 본다(쌓기는 색과 무관한 별도 동작).
+_STACK_TOKENS = ["쌓", "스택", "stack", "포개", "쌓아", "쌓기"]
+
+def detect_stack(text: str) -> bool:
+    t = text.replace(" ", "").lower()
+    return any(tok.lower() in t for tok in _STACK_TOKENS)
+
 # =============================================================================
 # 파싱 (fuzzy match → Task ID)
 # =============================================================================
 
 def parse_command(text: str) -> dict:
+    # stacking(쌓기) 우선 — 색과 무관한 별도 동작이라 색상 매핑보다 먼저 본다.
+    if detect_stack(text):
+        return {
+            "raw": text,
+            "matched": "쌓기",
+            "similarity": 1.0,
+            "task_id": "TASK_STACK",
+            "status": "SUCCESS",
+            "reason": "stacking 키워드",
+        }
+
     # 색상 우선(color-dominant): 이 로봇이 하는 일은 "색별 pick&place" 뿐이라
     # 발화에 색이 잡히면 표현이 어떻든 그 색 pick&place 로 보낸다(시연 안정성).
     #   "빨간색", "빨강 거 넣어줘", "파란색 큐브 집어" 등 모두 대응.

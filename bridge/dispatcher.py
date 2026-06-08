@@ -100,9 +100,42 @@ class Dispatcher:
         ]
         return cmd
 
+    # ── 레포 루트 기준 절대경로 ──
+    def _abs_root(self, root: str) -> str:
+        if not root:
+            return ""
+        return root if os.path.isabs(root) else os.path.join(REPO_ROOT, root)
+
+    # ── lerobot-replay 명령 구성 (시연용 녹화 재생) ──
+    def build_replay_command(self, replay: dict) -> list[str]:
+        """robot/카메라/캘리는 build_command 와 동일 소스(robot_profile)를 재사용하고,
+        정책 대신 녹화 데이터셋(repo_id/root/episode)을 재생한다."""
+        robot = self.profile.get("robot", {}) or {}
+        port = os.environ.get("ROBOT_PORT", robot.get("port", ""))
+
+        cmd = [
+            "lerobot-replay",
+            f"--robot.type={robot.get('type', 'so101_follower')}",
+            f"--robot.port={port}",
+            f"--robot.id={robot.get('id', 'my_follower')}",
+        ]
+        calib = self._calib_dir()
+        if calib:
+            cmd.append(f"--robot.calibration_dir={calib}")
+        cmd.append(f"--robot.cameras={self._cameras_arg()}")
+
+        cmd += [
+            f"--dataset.repo_id={replay.get('repo_id')}",
+            f"--dataset.root={self._abs_root(replay.get('root', ''))}",
+            f"--dataset.episode={replay.get('episode', 0)}",
+            "--play_sounds=false",   # lerobot-replay 는 --display_data 미지원, --play_sounds 만
+        ]
+        return cmd
+
     # ── 실행 ──
-    def run(self, policy: str, task: str) -> int:
-        cmd = self.build_command(policy, task)
+    def run(self, policy: str = None, task: str = None, replay: dict = None) -> int:
+        # replay 가 주어지면 녹화 재생(lerobot-replay), 아니면 정책 추론(lerobot-record).
+        cmd = self.build_replay_command(replay) if replay else self.build_command(policy, task)
         printable = " ".join(shlex.quote(c) for c in cmd)
 
         if self.dry_run:
@@ -114,14 +147,16 @@ class Dispatcher:
         if calib and not os.path.isdir(calib):
             print(f"[dispatcher][경고] 캘리브레이션 폴더 없음: {calib}")
 
-        # 데이터셋 누적 방지: 실행 전 임시 캐시 삭제
-        shutil.rmtree(self.dataset_root, ignore_errors=True)
+        # 데이터셋 누적 방지: record 만 임시 캐시 삭제. replay 는 외부 데이터 읽기전용.
+        if not replay:
+            shutil.rmtree(self.dataset_root, ignore_errors=True)
 
         # 정책 로딩 + 에피소드 실행 시간 + 여유(모델 다운로드/로드)
         inf = self.profile.get("inference", {}) or {}
         timeout = float(inf.get("episode_time_s", 60)) + 120.0
 
-        print(f"[dispatcher] 실행 (cwd={REPO_ROOT}, timeout={timeout:.0f}s):\n  {printable}")
+        mode = "replay" if replay else "record"
+        print(f"[dispatcher] 실행 [{mode}] (cwd={REPO_ROOT}, timeout={timeout:.0f}s):\n  {printable}")
         try:
             # 자식을 별도 프로세스 그룹으로 → 타임아웃/Ctrl+C 시 그룹 통째 종료 가능
             proc = subprocess.Popen(cmd, cwd=REPO_ROOT, start_new_session=True)

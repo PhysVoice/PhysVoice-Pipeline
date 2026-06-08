@@ -18,7 +18,16 @@ class Resolution:
     task_id: str
     policy: str | None = None
     task: str | None = None
+    replay: dict | None = None   # 선택: 시연용 녹화 재생 소스 (repo_id/root/episode)
     reason: str = ""
+
+    @property
+    def has_policy(self) -> bool:
+        return bool(self.policy and self.task)
+
+    @property
+    def has_replay(self) -> bool:
+        return bool(self.replay)
 
 
 class Router:
@@ -47,8 +56,12 @@ class Router:
 
         policy = entry.get("policy")
         task = entry.get("task")
-        if not policy or not task:
-            return Resolution(False, task_id,
-                              reason=f"task_map 항목 불완전 ({task_id}): policy/task 누락")
+        replay = entry.get("replay")
 
-        return Resolution(True, task_id, policy=policy, task=task, reason="ok")
+        # 정책(policy+task) 또는 리플레이 소스 중 하나라도 있으면 지원.
+        # (stacking 처럼 정책은 없고 리플레이만 있는 태스크 → --replay 모드에서만 동작)
+        if not (policy and task) and not replay:
+            return Resolution(False, task_id,
+                              reason=f"task_map 항목 불완전 ({task_id}): policy/task·replay 모두 없음")
+
+        return Resolution(True, task_id, policy=policy, task=task, replay=replay, reason="ok")
