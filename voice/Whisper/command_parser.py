@@ -43,10 +43,14 @@ FUZZY_THRESHOLD = 0.5  # 유사도 이 미만이면 매핑 실패로 처리
 # 전처리
 # =============================================================================
 
-# "피식아"의 STT 오인식 패턴 — 텍스트 앞에 붙으면 제거
+# "피식아"의 STT 오인식 패턴 — 텍스트 앞에 붙으면 제거.
+# Whisper 가 "피식아"를 다양하게 흘려듣기 때문에 넉넉히 둔다(시연 안정성).
 _WAKE_WORD_PATTERNS = [
-    "피식아", "피시가", "피시카", "피싱이야", "PC가", "pc가",
-    "비싸", "피직아", "피식야", "비식아", "피식",
+    "피식아", "피식하", "피식야", "피식가", "피식카", "피식",
+    "피시가", "피시카", "피시각", "피싯아", "피싯", "피슥아", "피슥",
+    "피석아", "피섹아", "피씩아", "피씨카", "피지카", "피직아", "피칙아",
+    "피싱이야", "피싱아", "피쉬카", "피쉬아", "비식아", "비싯아", "비싸",
+    "이시각", "시각", "PC가", "pc가", "pc야", "삐식아", "삐식",
 ]
 
 def _strip_wake_word(text: str) -> str:
@@ -102,12 +106,55 @@ def fuzzy_match(text: str) -> tuple[str | None, float]:
     return None, best_score
 
 # =============================================================================
+# 색상 폴백 — 풀 문장 매칭이 실패해도 "색"만 잡히면 pick&place 로 라우팅
+#   ("빨간색", "빨강색", "빨간 거 넣어줘" 등 자유로운 발화 대응 — 시연 안정성)
+#   이 로봇이 할 수 있는 건 색별 pick&place 뿐이므로 색=의도로 본다.
+# =============================================================================
+
+_COLOR_TO_PICKPUT = {
+    "red":   ("빨간색 박스 집어서 넣어", "TASK_PICK_PUT_RED_BOX"),
+    "blue":  ("파란색 박스 집어서 넣어", "TASK_PICK_PUT_BLUE_BOX"),
+    "green": ("초록색 박스 집어서 넣어", "TASK_PICK_PUT_GREEN_BOX"),  # 모델 없음 → router 가 미지원 처리
+}
+
+# 색 토큰(공백 제거·소문자 후 부분일치). "빨간색"⊃"빨간", "빨강색"⊃"빨강" 등.
+_COLOR_TOKENS = {
+    "red":   ["빨간", "빨강", "빨갠", "red", "레드"],
+    "blue":  ["파란", "파랑", "파람", "blue", "블루"],
+    "green": ["초록", "녹색", "초로", "green", "그린"],
+}
+
+def detect_color(text: str) -> "str | None":
+    """발화에서 색 의도를 추출 (없으면 None). red/blue/green 순으로 첫 매치."""
+    t = text.replace(" ", "").lower()
+    for color, toks in _COLOR_TOKENS.items():
+        if any(tok in t for tok in toks):
+            return color
+    return None
+
+# =============================================================================
 # 파싱 (fuzzy match → Task ID)
 # =============================================================================
 
 def parse_command(text: str) -> dict:
-    matched_cmd, score = fuzzy_match(text)
+    # 색상 우선(color-dominant): 이 로봇이 하는 일은 "색별 pick&place" 뿐이라
+    # 발화에 색이 잡히면 표현이 어떻든 그 색 pick&place 로 보낸다(시연 안정성).
+    #   "빨간색", "빨강 거 넣어줘", "파란색 큐브 집어" 등 모두 대응.
+    #   색이 없을 때만 기존 퍼지매칭으로 폴백.
+    color = detect_color(text)
+    if color is not None:
+        cmd, task_id = _COLOR_TO_PICKPUT[color]
+        _, score = fuzzy_match(text)
+        return {
+            "raw": text,
+            "matched": cmd,
+            "similarity": round(score, 2),
+            "task_id": task_id,
+            "status": "SUCCESS",
+            "reason": f"색상 매핑 ({color})",
+        }
 
+    matched_cmd, score = fuzzy_match(text)
     if matched_cmd is None:
         return {
             "raw": text,

@@ -17,6 +17,7 @@ import sys
 from bridge.router import Router
 from bridge.dispatcher import Dispatcher
 from bridge import feedback
+from bridge import speech
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -38,10 +39,14 @@ def main():
     ap.add_argument("--file", default=None, help="마이크 대신 오디오 파일")
     ap.add_argument("--skip-kws", action="store_true", help="웨이크워드 생략")
     ap.add_argument("--no-denoise", action="store_true", help="노이즈 제거 비활성화")
+    ap.add_argument("--no-tts", action="store_true", help="시연용 음성 피드백(TTS) 비활성화")
     ap.add_argument("--dry-run", action="store_true", help="lerobot 호출 대신 명령만 출력")
     ap.add_argument("--print-commands", action="store_true",
                     help="task_map 의 모든 명령에 대한 lerobot-record 명령을 출력하고 종료 (voice/torch 불필요)")
     args = ap.parse_args()
+
+    if args.no_tts:
+        os.environ["PHYSVOICE_TTS"] = "0"
 
     router = Router(args.task_map)
     dispatcher = Dispatcher(args.robot_profile, dry_run=args.dry_run)
@@ -74,7 +79,12 @@ def main():
     from rt_pipeline import RealtimePipeline
     from audio_stream import AudioStream, NetworkStream, FileStream
 
-    pipeline = RealtimePipeline(use_denoise=not args.no_denoise, result_callback=on_command)
+    # 이벤트(웨이크워드 인식·명령 미인식) → 시연용 TTS
+    def on_event(name):
+        speech.speak(name, block=True)
+
+    pipeline = RealtimePipeline(use_denoise=not args.no_denoise,
+                                result_callback=on_command, event_callback=on_event)
 
     # Whisper 모델을 미리 로드한다. 안 하면 첫 발화("피식아") 인식 도중 모델 로딩으로
     # 멈춘 듯 보이고(최초엔 ~1.5GB 다운로드), 네트워크 실패가 대화 중에 터진다.

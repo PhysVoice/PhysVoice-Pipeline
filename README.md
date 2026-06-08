@@ -5,6 +5,15 @@
 
 > **"피식아, 빨간색 박스 집어서 넣어"** → 빨강 큐브를 집어 왼쪽 박스에 넣음
 
+### 음성 명령 (유연 매핑)
+이 로봇은 **색별 pick&place** 만 한다 → 발화에 **색**만 잡히면 그 색 동작으로 보낸다.
+- "빨간색", "빨강 거 넣어줘", "빨간색 박스 집어서 넣어" → **빨강** pick&place
+- "파란색", "파랑", "파란 큐브 넣어" → **파랑** pick&place
+- 초록/그 외 → "미지원" (모델 없음)
+
+웨이크워드 **"피식아"** 는 STT 오인식(피시카·피식하 등)도 폭넓게 인식한다.
+로봇이 **TTS 로 응답**한다(시연용): 호명 시 "네! 피식이 여기 있어요", 동작 전 "빨간색 박스, 넣어 드릴게요!", 완료 시 "다 했어요!". 끄려면 `run.sh --no-tts` (또는 `PHYSVOICE_TTS=0`).
+
 ## 빠른 시작
 ```bash
 git clone https://github.com/PhysVoice/PhysVoice-Pipeline.git
@@ -38,7 +47,7 @@ PhysVoice-Pipeline/
 **로봇 PC에서 처음 띄우는 작업자/에이전트는 → [HANDOFF.md](HANDOFF.md) 부터.**
 
 ## 상태
-🚧 **골격 단계** — 폴더 구조 + setup.sh 완료. voice/bridge 구현은 다음 단계.
+🤖 **로봇 PC bring-up 단계** — rtx3090(SO101 연결)에서 환경/하드웨어 검증 완료.
 
 | 구성 | 상태 |
 |------|------|
@@ -46,9 +55,13 @@ PhysVoice-Pipeline/
 | voice (Voice 에서 이식) | ✅ |
 | bridge (router·dispatcher·feedback·main) | ✅ |
 | run.sh 엔트리포인트 연결 | ✅ |
-| lerobot 설치 (PhysVoice 포크 핀) | ✅ |
+| lerobot 설치 (PhysVoice 포크 핀, smolvla+feetech) | ✅ |
 | calibration 복사 (SO101 follower/leader) | ✅ |
-| **실제 로봇 PC 검증** (setup.sh 실행 + 음성→동작) | ⬜ |
+| 하드웨어 값 정정 (카메라 video0/2, 포트 검증) | ✅ |
+| 로봇 단독 동작 (빨강 정책 → 팔 동작) | ✅ |
+| 마이크·STT (라이브 음성 인식) | ✅ |
+| 음성→로봇 라이브 통합 (full `run.sh`) | 🔄 확인 중 |
+| 시연용 TTS 음성 피드백 + 유연한 명령 매핑 | ✅ |
 
 ### 테스트 (로봇/torch 없이)
 ```bash

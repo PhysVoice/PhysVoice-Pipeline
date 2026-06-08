@@ -71,7 +71,8 @@ class RealtimePipeline:
     """
 
     def __init__(self, use_denoise: bool = True,
-                 result_callback: Optional[Callable[[dict, Callable[[str], None]], None]] = None):
+                 result_callback: Optional[Callable[[dict, Callable[[str], None]], None]] = None,
+                 event_callback: Optional[Callable[[str], None]] = None):
         print("[초기화] Silero VAD 모델 로딩...")
         self.vad_model       = _load_silero_vad()
         self.use_denoise     = use_denoise
@@ -79,7 +80,18 @@ class RealtimePipeline:
         # bridge 연결 훅: 명령 인식(SUCCESS) 시 result_callback(result, notify) 호출.
         # None 이면 기존 standalone 동작 그대로 (backward-compatible).
         self.result_callback = result_callback
+        # 이벤트 훅: "wake"(웨이크워드 인식), "fail"(명령 미인식) 등 시점에 호출.
+        # bridge 가 TTS 등에 사용. None 이면 아무 일도 안 함(backward-compatible).
+        self.event_callback  = event_callback
         print("[초기화] 완료. 파이프라인 준비됨\n")
+
+    # ── 이벤트 훅 (TTS 등) — 실패해도 파이프라인 영향 없음 ──
+    def _event(self, name: str):
+        if self.event_callback is not None:
+            try:
+                self.event_callback(name)
+            except Exception as e:
+                print(f"[경고 ] 이벤트 콜백 실패({name}): {e}")
 
     # ── 서버 + 노트북 동시 출력 ─────────────────────
     def _notify(self, msg: str):
@@ -261,13 +273,18 @@ class RealtimePipeline:
                         self._notify("[ 인식 실패 ] '피식아'라고 말해주세요.")
                         continue
 
-                    # ─── LISTENING + PROCESSING (최대 2회 재시도) ────────────
+                    # ─── 웨이크워드 인식됨: 응답(TTS) 후 명령 수집 ────────────
+                    self._event("wake")                  # TTS: "네! 피식이 여기 있어요"
                     self._notify("[ 명령 대기 ] 명령을 말씀해주세요.")
+                    self._flush(stream)                  # TTS 재생 중 캡처된 잔향 폐기
+
+                    # ─── LISTENING + PROCESSING (최대 2회 재시도) ────────────
                     for attempt in range(2):
                         self.vad_model.reset_states()
                         audio = self._listen(stream)
 
                         if audio is None:
+                            self._event("fail")
                             self._notify("[ 인식 실패 ] 다시 말씀해주세요.")
                             continue
 
