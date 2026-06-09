@@ -199,44 +199,53 @@ class RealtimePipeline:
         dur = len(audio) / SAMPLE_RATE
         print(f"[처리 ] 발화 {dur:.1f}s 처리 중...")
 
-        if self.use_denoise:
-            try:
-                from denoise import denoise   # 지연 import (deepfilternet 선택 설치)
-                audio = denoise(audio)
-            except Exception as e:
-                print(f"[경고 ] 노이즈 제거 불가 ({e}), 원본 사용 — 끄려면 --no-denoise")
+        # 처리(STT)·로봇 실행·TTS 동안 마이크 입력을 멈춘다.
+        #   - 로봇 재생(수십 초) 동안 오디오가 쌓여 옛 발화가 뒤늦게 처리되는 누적 방지
+        #   - 스피커(JBL)로 나가는 TTS 를 마이크가 되받아 오인식하는 피드백 방지
+        #   이 발화는 이미 audio 로 캡처돼 있으므로 멈춰도 손실 없음.
+        paused = stream is not None and hasattr(stream, "pause")
+        if paused:
+            stream.pause()
+        try:
+            if self.use_denoise:
+                try:
+                    from denoise import denoise   # 지연 import (deepfilternet 선택 설치)
+                    audio = denoise(audio)
+                except Exception as e:
+                    print(f"[경고 ] 노이즈 제거 불가 ({e}), 원본 사용 — 끄려면 --no-denoise")
 
-        raw_text   = transcribe(audio)
-        normalized = normalize_korean_command(raw_text)
-        result     = parse_command(normalized)
+            raw_text   = transcribe(audio)
+            normalized = normalize_korean_command(raw_text)
+            result     = parse_command(normalized)
 
-        lines = [
-            "─" * 40,
-            f"  원문   : {raw_text}",
-            f"  매핑   : {result['matched']}",
-            f"  상태   : {result['status']}",
-            f"  Task   : {result['task_id']}",
-            "─" * 40,
-        ]
-        output = "\n".join(lines)
-        print(output)
+            lines = [
+                "─" * 40,
+                f"  원문   : {raw_text}",
+                f"  매핑   : {result['matched']}",
+                f"  상태   : {result['status']}",
+                f"  Task   : {result['task_id']}",
+                "─" * 40,
+            ]
+            output = "\n".join(lines)
+            print(output)
 
-        # 노트북으로도 결과 전송
-        if stream is not None and hasattr(stream, "send"):
-            stream.send(output)
+            # 노트북으로도 결과 전송
+            if stream is not None and hasattr(stream, "send"):
+                stream.send(output)
 
-        # ── Bridge 훅: 인식 성공 시 콜백 (로봇 실행 동안 블로킹) ──
-        if self.result_callback is not None and result["status"] == "SUCCESS":
-            try:
-                self.result_callback(result, self._notify)
-            except Exception as e:
-                print(f"[경고 ] bridge 콜백 실패: {e}")
-            finally:
-                # 로봇 실행 동안 쌓인 오디오 전량 폐기 (스테일 발화 오인식 방지)
-                if stream is not None:
-                    self._drain_all(stream)
+            # ── Bridge 훅: 인식 성공 시 콜백 (로봇 실행 동안 블로킹) ──
+            if self.result_callback is not None and result["status"] == "SUCCESS":
+                try:
+                    self.result_callback(result, self._notify)
+                except Exception as e:
+                    print(f"[경고 ] bridge 콜백 실패: {e}")
 
-        return result["status"] == "SUCCESS"
+            return result["status"] == "SUCCESS"
+        finally:
+            if paused:
+                stream.resume()           # 큐 비우고 입력 재개 → 다음 발화는 깨끗하게
+            elif stream is not None:
+                self._drain_all(stream)   # pause 미지원 스트림(네트워크 등)은 스냅샷 비움
 
     # ── 메인 루프 ────────────────────────────────
     def run(self, stream, skip_kws: bool = False):
@@ -274,9 +283,13 @@ class RealtimePipeline:
                         continue
 
                     # ─── 웨이크워드 인식됨: 응답(TTS) 후 명령 수집 ────────────
+                    if hasattr(stream, "pause"):
+                        stream.pause()                   # 응답 TTS 가 마이크로 되먹지 않게
                     self._event("wake")                  # TTS: "네! 피식이 여기 있어요"
+                    if hasattr(stream, "pause"):
+                        stream.resume()
                     self._notify("[ 명령 대기 ] 명령을 말씀해주세요.")
-                    self._flush(stream)                  # TTS 재생 중 캡처된 잔향 폐기
+                    self._flush(stream)                  # 잔향 폐기(pause 미지원 스트림 대비)
 
                     # ─── LISTENING + PROCESSING (최대 2회 재시도) ────────────
                     for attempt in range(2):

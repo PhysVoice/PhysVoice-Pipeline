@@ -27,6 +27,6 @@ def unsupported(notify, res):
 def done(notify, res, code: int):
     if code == 0:
         notify(f"[ 완료 ] {res.task_id} 동작 완료")
-        speech.speak("done", block=False)
+        speech.speak("done", block=True)   # 마이크 재개(pause 해제) 전에 멘트가 끝나도록
     else:
         notify(f"[ 실패 ] 로봇 실행 오류 (exit {code})")

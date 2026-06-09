@@ -23,9 +23,31 @@ class AudioStream:
         # maxsize 로 무한 누적 방지 (로봇 실행 등 장시간 소비 중단 시 ~16s 분량만 유지).
         self._q: "queue.Queue[np.ndarray]" = queue.Queue(maxsize=512)
         self._stream = None
+        self._paused = False   # True 동안 입력을 버린다(처리·로봇·TTS 중 누적/피드백 방지)
+
+    def pause(self):
+        """마이크 입력 일시 중단 — 콜백이 새 청크를 버리고 큐도 비운다.
+        로봇 실행/TTS 동안 호출해 오디오 누적과 스피커→마이크 피드백을 막는다."""
+        self._paused = True
+        try:
+            while True:
+                self._q.get_nowait()
+        except queue.Empty:
+            pass
+
+    def resume(self):
+        """마이크 입력 재개 (재개 직전 잔여도 한 번 비움)."""
+        try:
+            while True:
+                self._q.get_nowait()
+        except queue.Empty:
+            pass
+        self._paused = False
 
     def _callback(self, indata, frames, time, status):
         # 오디오 콜백 스레드는 절대 블로킹하면 안 됨(xrun). 큐가 차면 가장 오래된 입력 폐기.
+        if self._paused:
+            return                      # 일시정지 중엔 캡처 폐기
         chunk = indata[:, 0].copy().astype(np.float32)
         try:
             self._q.put_nowait(chunk)
