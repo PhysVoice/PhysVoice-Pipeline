@@ -15,6 +15,7 @@ _LINES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "voice_lin
 # key → 한국어 문구. generate.py 가 이 사전을 그대로 읽어 wav 를 만든다.
 # (key 가 Task ID 면 해당 명령 인식 시 그 멘트를 말한다)
 PHRASES = {
+    "ready":                  "안녕하세요, 피식이예요. 시키실 게 있으면 피식아라고 불러주세요.",
     "wake":                   "네! 피식이 여기 있어요.",
     "TASK_PICK_PUT_RED_BOX":  "빨간색 박스, 넣어 드릴게요!",
     "TASK_PICK_PUT_BLUE_BOX": "파란색 박스, 넣어 드릴게요!",

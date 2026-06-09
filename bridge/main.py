@@ -38,6 +38,8 @@ def main():
     ap.add_argument("--port", type=int, default=9876, help="--network 포트")
     ap.add_argument("--file", default=None, help="마이크 대신 오디오 파일")
     ap.add_argument("--skip-kws", action="store_true", help="웨이크워드 생략")
+    ap.add_argument("--mic", default=os.environ.get("PHYSVOICE_MIC"),
+                    help="마이크 장치 고정 (인덱스 또는 이름 일부, 예: C920). 미지정=시스템 기본")
     ap.add_argument("--no-denoise", action="store_true", help="노이즈 제거 비활성화")
     ap.add_argument("--no-tts", action="store_true", help="시연용 음성 피드백(TTS) 비활성화")
     ap.add_argument("--replay", action="store_true",
@@ -118,7 +120,14 @@ def main():
         print(f"[ 파일 ] {args.file}\n")
         stream = FileStream(args.file)
     else:
-        stream = AudioStream()
+        mic = args.mic
+        if mic is not None and str(mic).isdigit():  # "6" → 6 (인덱스), "C920" → 그대로(이름)
+            mic = int(mic)
+        stream = AudioStream(device=mic)
+
+    # 시작 인사 (대화형): "시키실 게 있으면 피식아라고 불러주세요" — 파일 테스트는 생략
+    if not args.file:
+        speech.speak("ready", block=True)
 
     pipeline.run(stream, skip_kws=args.skip_kws)
 

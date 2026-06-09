@@ -14,9 +14,12 @@ CHUNK_SIZE  = 512   # ~32 ms @ 16 kHz
 class AudioStream:
     """실시간 마이크 입력 스트림."""
 
-    def __init__(self, sample_rate: int = SAMPLE_RATE, chunk_size: int = CHUNK_SIZE):
+    def __init__(self, sample_rate: int = SAMPLE_RATE, chunk_size: int = CHUNK_SIZE, device=None):
         self.sample_rate = sample_rate
         self.chunk_size  = chunk_size
+        # device: None=시스템 기본 입력. 인덱스(int) 또는 이름 일부(str, 예 "C920")로 고정 가능.
+        #   기본 소스가 바뀌어도 특정 마이크를 항상 쓰게 해 "됐다 안됐다" 방지.
+        self.device      = device
         # maxsize 로 무한 누적 방지 (로봇 실행 등 장시간 소비 중단 시 ~16s 분량만 유지).
         self._q: "queue.Queue[np.ndarray]" = queue.Queue(maxsize=512)
         self._stream = None
@@ -47,6 +50,7 @@ class AudioStream:
             dtype="float32",
             blocksize=self.chunk_size,
             callback=self._callback,
+            device=self.device,   # None=기본, 또는 인덱스/이름 일부로 고정
         )
         self._stream.start()
 
